@@ -23,7 +23,7 @@
         <p class="upload-sub">または</p>
         <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">ファイルを選択</button>
         <input type="file" id="file-input" accept=".csv" multiple style="display:none">
-        <p class="upload-hint">複数ファイル可 ／ ファイル名例：楽天・26年５月.csv</p>
+        <p class="upload-hint">複数ファイル可 ／ 月次例：楽天・26年５月.csv　週次例：アマゾン・26年5月1日.csv</p>
       </div>
     </div>
   </section>
@@ -41,6 +41,7 @@
       <button class="tab-btn active" data-tab="1">① 全商品売上</button>
       <button class="tab-btn" data-tab="2">② 商品別売上</button>
       <button class="tab-btn" data-tab="3">③ 在庫分析</button>
+      <button class="tab-btn" data-tab="4">④ 週次推移</button>
     </div>
 
     <!-- Tab 1 -->
@@ -107,6 +108,7 @@
             <option value="0">全件</option>
           </select>
         </label>
+        <span id="t3-latest-info" class="latest-info"></span>
         <div class="legend">
           <span class="legend-dot red"></span>1ヶ月未満
           <span class="legend-dot orange"></span>1〜2ヶ月
@@ -120,6 +122,52 @@
         </div>
       </div>
       <div id="t3-table" class="data-table"></div>
+    </div>
+
+    <!-- Tab 4 -->
+    <div class="tab-content hidden" id="tab-4">
+
+      <div class="t4-section-title">① 全体売上 週次推移（チャネル別）</div>
+      <div class="controls">
+        <label>指標
+          <select id="t4-metric">
+            <option value="amount">売上金額</option>
+            <option value="qty">売上数量</option>
+          </select>
+        </label>
+      </div>
+      <div class="chart-wrap" id="t4a-chart-wrap">
+        <canvas id="chart4a"></canvas>
+      </div>
+
+      <div class="t4-section-title" style="margin-top:36px">② 商品別 週次推移</div>
+      <div class="controls t4b-controls">
+        <div class="ctrl-block">
+          <div class="ctrl-label">チャネル</div>
+          <div class="cb-group" id="t4-channels"></div>
+        </div>
+        <div class="ctrl-block">
+          <div class="ctrl-label">表示単位</div>
+          <label class="cb-label"><input type="radio" name="t4-view" value="total" checked> チャネル合計</label>
+          <label class="cb-label"><input type="radio" name="t4-view" value="each"> チャネル別</label>
+        </div>
+        <div class="ctrl-block">
+          <div class="ctrl-label">指標</div>
+          <select id="t4-metric2">
+            <option value="amount">売上金額</option>
+            <option value="qty">売上数量</option>
+          </select>
+        </div>
+        <div class="ctrl-block ctrl-block--wide">
+          <div class="ctrl-label">商品を選択（複数選択可）</div>
+          <input type="text" id="t4-prod-search" class="prod-search" placeholder="商品名を検索...">
+          <div class="cb-group cb-group--scroll" id="t4-products"></div>
+        </div>
+      </div>
+      <div class="chart-wrap" id="t4b-chart-wrap">
+        <canvas id="chart4b"></canvas>
+      </div>
+
     </div>
 
   </section>

@@ -289,3 +289,99 @@ body {
   color: var(--muted);
   font-size: .95rem;
 }
+
+/* ── Tab 3: latest info badge ── */
+.latest-info {
+  font-size: .8rem;
+  color: var(--muted);
+  background: #f1f5f9;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+/* ── Weekly file badge in file list ── */
+.file-period--weekly {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* ── Tab 4: section headers ── */
+.t4-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #dbeafe;
+}
+
+/* ── Tab 4: controls layout ── */
+.t4b-controls {
+  align-items: flex-start;
+}
+.ctrl-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ctrl-block--wide {
+  flex: 1;
+  min-width: 260px;
+}
+.ctrl-label {
+  font-size: .72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+/* ── Checkbox groups ── */
+.cb-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cb-group--scroll {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  max-height: 168px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #fff;
+}
+.cb-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .88rem;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 2px 0;
+}
+.cb-label input[type="checkbox"],
+.cb-label input[type="radio"] {
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* ── Product search input ── */
+.prod-search {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: .88rem;
+  color: var(--text);
+  background: #fff;
+  width: 100%;
+  max-width: 280px;
+}
+.prod-search:focus {
+  outline: none;
+  border-color: var(--primary-lt);
+  box-shadow: 0 0 0 2px rgba(59,130,246,.2);
+}
