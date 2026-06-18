@@ -770,6 +770,47 @@ function renderActiveTab() {
   else if (state.activeTab === 4) renderTab4();
 }
 
+// ── LocalStorage Persistence ──────────────────────────────────────────────────
+const STORAGE_KEY = 'ec-app-files';
+
+function saveFilesToStorage() {
+  try {
+    const data = state.files.map(f => ({
+      filename: f.filename,
+      channel:  f.channel,
+      period:   f.period,
+      type:     f.type,
+      sortKey:  f.sortKey,
+      rows:     f.rows,
+      // date は sortKey から復元するため保存しない
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.warn('ファイル保存失敗:', e.message);
+  }
+}
+
+function loadFilesFromStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!Array.isArray(data) || data.length === 0) return;
+    state.files = data.map(f => {
+      let date = null;
+      if (f.type === 'weekly' && f.sortKey && /^\d{4}-\d{2}-\d{2}$/.test(f.sortKey)) {
+        const [yr, mo, dy] = f.sortKey.split('-').map(Number);
+        date = new Date(yr, mo - 1, dy);
+      }
+      return { ...f, date };
+    });
+    renderUI();
+  } catch (e) {
+    console.warn('ファイル読み込み失敗:', e.message);
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
 // ── File management ──────────────────────────────────────────────────────────
 async function addFile(file) {
   const btn = document.querySelector('.btn-primary');
@@ -780,6 +821,7 @@ async function addFile(file) {
     const idx = state.files.findIndex(f => f.filename === data.filename);
     if (idx >= 0) state.files[idx] = data; else state.files.push(data);
     renderUI();
+    saveFilesToStorage();
   } catch (e) {
     alert(`読み込みエラー: ${e.message}`);
   } finally {
@@ -791,6 +833,7 @@ async function addFile(file) {
 function removeFile(i) {
   state.files.splice(i, 1);
   renderUI();
+  saveFilesToStorage();
 }
 
 function renderUI() {
@@ -800,6 +843,16 @@ function renderUI() {
 
   if (!hasFiles) return;
 
+  // ファイル件数サマリーを更新
+  const monthly = state.files.filter(f => f.type === 'monthly').length;
+  const weekly  = state.files.filter(f => f.type === 'weekly').length;
+  let summaryText;
+  if (monthly > 0 && weekly > 0) summaryText = `月次 ${monthly}件 ・ 週次 ${weekly}件`;
+  else if (weekly > 0)  summaryText = `週次 ${weekly}件`;
+  else                  summaryText = `月次 ${monthly}件`;
+  document.getElementById('files-summary').textContent = summaryText;
+
+  // ファイルカード一覧を更新（リストの開閉状態はそのまま維持）
   document.getElementById('files-list').innerHTML = state.files.map((f, i) => `
     <div class="file-card">
       <span class="file-channel">${escHtml(f.channel)}</span>
@@ -868,4 +921,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (el4pr) el4pr.addEventListener('change', (e) => {
     if (e.target.type === 'checkbox') renderTab4b();
   });
+
+  // ファイル一覧の開閉トグル
+  document.getElementById('files-toggle').addEventListener('click', () => {
+    const list   = document.getElementById('files-list');
+    const caret  = document.querySelector('#files-toggle .toggle-caret');
+    const nowHidden = list.classList.toggle('hidden');
+    caret.textContent = nowHidden ? '▶' : '▼';
+  });
+
+  // 前回保存したファイルを復元
+  loadFilesFromStorage();
 });

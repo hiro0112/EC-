@@ -95,9 +95,34 @@ body {
 
 /* ── Files list ── */
 .files-section { margin-top: 20px; }
-.section-label { font-size: .85rem; color: var(--muted); margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+.section-label { font-size: .85rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
 
-.files-list { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Files header (collapsible toggle) */
+.files-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 0;
+  text-align: left;
+  color: inherit;
+  font-family: inherit;
+}
+.files-header:hover .section-label { color: var(--primary); }
+.files-summary-count {
+  background: var(--primary);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+.toggle-caret { margin-left: auto; color: var(--muted); font-size: .8rem; }
+
+.files-list { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
 
 .file-card {
   background: var(--surface);

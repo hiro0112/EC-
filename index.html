@@ -30,8 +30,12 @@
 
   <!-- Loaded files list -->
   <section id="files-section" class="files-section hidden">
-    <h2 class="section-label">読み込み済みファイル</h2>
-    <div id="files-list" class="files-list"></div>
+    <button class="files-header" id="files-toggle">
+      <span class="section-label">読み込み済みファイル</span>
+      <span id="files-summary" class="files-summary-count"></span>
+      <span class="toggle-caret">▶</span>
+    </button>
+    <div id="files-list" class="files-list hidden"></div>
   </section>
 
   <!-- Analysis -->
