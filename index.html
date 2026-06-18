@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EC-app 分析ダッシュボード</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <header class="app-header">
+    <h1>EC-app 分析ダッシュボード</h1>
+    <span class="privacy-badge">🔒 データはブラウザ内のみで処理されます（外部送信なし）</span>
+  </header>
+
+  <!-- Upload -->
+  <section class="upload-section">
+    <div id="dropzone" class="dropzone">
+      <div class="dropzone-inner">
+        <div class="upload-icon">📂</div>
+        <p class="upload-text">CSVファイルをドラッグ＆ドロップ</p>
+        <p class="upload-sub">または</p>
+        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">ファイルを選択</button>
+        <input type="file" id="file-input" accept=".csv" multiple style="display:none">
+        <p class="upload-hint">複数ファイル可 ／ ファイル名例：楽天・26年５月.csv</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Loaded files list -->
+  <section id="files-section" class="files-section hidden">
+    <h2 class="section-label">読み込み済みファイル</h2>
+    <div id="files-list" class="files-list"></div>
+  </section>
+
+  <!-- Analysis -->
+  <section id="analysis-section" class="analysis-section hidden">
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="1">① 全商品売上</button>
+      <button class="tab-btn" data-tab="2">② 商品別売上</button>
+      <button class="tab-btn" data-tab="3">③ 在庫分析</button>
+    </div>
+
+    <!-- Tab 1 -->
+    <div class="tab-content active" id="tab-1">
+      <div class="controls">
+        <label>チャネル
+          <select id="t1-channel"><option value="">全チャネル</option></select>
+        </label>
+        <label>期間
+          <select id="t1-period"><option value="">全期間</option></select>
+        </label>
+      </div>
+      <div id="t1-cards" class="summary-cards"></div>
+      <div class="chart-wrap">
+        <canvas id="chart1"></canvas>
+      </div>
+    </div>
+
+    <!-- Tab 2 -->
+    <div class="tab-content hidden" id="tab-2">
+      <div class="controls">
+        <label>チャネル
+          <select id="t2-channel"><option value="">全チャネル</option></select>
+        </label>
+        <label>期間
+          <select id="t2-period"><option value="">全期間</option></select>
+        </label>
+        <label>指標
+          <select id="t2-metric">
+            <option value="amount">売上金額</option>
+            <option value="qty">売上数量</option>
+          </select>
+        </label>
+        <label>表示件数
+          <select id="t2-topn">
+            <option value="10">上位10件</option>
+            <option value="20">上位20件</option>
+            <option value="50">上位50件</option>
+            <option value="0">全件</option>
+          </select>
+        </label>
+        <label>商品検索（複数はカンマ区切り）
+          <input type="text" id="t2-search" placeholder="例：クロスメッシュ,スポーツ">
+        </label>
+      </div>
+      <div class="chart-scroll">
+        <div class="chart-wrap" id="t2-chart-wrap">
+          <canvas id="chart2"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab 3 -->
+    <div class="tab-content hidden" id="tab-3">
+      <div class="controls">
+        <label>チャネル
+          <select id="t3-channel"><option value="">全チャネル</option></select>
+        </label>
+        <label>表示件数
+          <select id="t3-topn">
+            <option value="20">上位20件</option>
+            <option value="50">上位50件</option>
+            <option value="100">上位100件</option>
+            <option value="0">全件</option>
+          </select>
+        </label>
+        <div class="legend">
+          <span class="legend-dot red"></span>1ヶ月未満
+          <span class="legend-dot orange"></span>1〜2ヶ月
+          <span class="legend-dot yellow"></span>2〜3ヶ月
+          <span class="legend-dot green"></span>3ヶ月以上
+        </div>
+      </div>
+      <div class="chart-scroll">
+        <div class="chart-wrap" id="t3-chart-wrap">
+          <canvas id="chart3"></canvas>
+        </div>
+      </div>
+      <div id="t3-table" class="data-table"></div>
+    </div>
+
+  </section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
