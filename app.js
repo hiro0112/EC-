@@ -852,22 +852,20 @@ document.addEventListener('DOMContentLoaded', () => {
   ['t3-channel','t3-topn'].forEach(id =>
     document.getElementById(id).addEventListener('change', renderTab3));
 
-  // Tab 4 controls
-  document.getElementById('t4-metric').addEventListener('change', renderTab4a);
-  document.getElementById('t4-metric2').addEventListener('change', renderTab4b);
-  document.getElementById('t4-prod-search').addEventListener('input', (e) => {
-    buildTab4Products(e.target.value);
-    renderTab4b();
-  });
-  document.querySelectorAll('input[name="t4-view"]').forEach(r =>
-    r.addEventListener('change', renderTab4b));
-
-  // Tab 4 チャネル選択（イベント委譲）
-  document.getElementById('t4-channels').addEventListener('change', (e) => {
+  // Tab 4 controls（null ガード付き：HTML キャッシュ不整合でもクラッシュしない）
+  const el4m  = document.getElementById('t4-metric');
+  const el4m2 = document.getElementById('t4-metric2');
+  const el4ps = document.getElementById('t4-prod-search');
+  const el4ch = document.getElementById('t4-channels');
+  const el4pr = document.getElementById('t4-products');
+  if (el4m)  el4m.addEventListener('change', renderTab4a);
+  if (el4m2) el4m2.addEventListener('change', renderTab4b);
+  if (el4ps) el4ps.addEventListener('input', (e) => { buildTab4Products(e.target.value); renderTab4b(); });
+  document.querySelectorAll('input[name="t4-view"]').forEach(r => r.addEventListener('change', renderTab4b));
+  if (el4ch) el4ch.addEventListener('change', (e) => {
     if (e.target.type === 'checkbox') { buildTab4Products(); renderTab4b(); }
   });
-  // Tab 4 商品選択（イベント委譲）
-  document.getElementById('t4-products').addEventListener('change', (e) => {
+  if (el4pr) el4pr.addEventListener('change', (e) => {
     if (e.target.type === 'checkbox') renderTab4b();
   });
 });
