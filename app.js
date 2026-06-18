@@ -7,6 +7,9 @@ const state = {
   activeTab: 1,
 };
 
+// ファイル一覧の開閉状態（コードで管理することでHTML差分に依存しない）
+let filesListOpen = false;
+
 // 折れ線グラフ用カラーパレット（Tab 4）
 const CHART_COLORS = [
   '#3b82f6','#10b981','#ef4444','#f97316',
@@ -852,7 +855,7 @@ function renderUI() {
   else                  summaryText = `月次 ${monthly}件`;
   document.getElementById('files-summary').textContent = summaryText;
 
-  // ファイルカード一覧を更新（リストの開閉状態はそのまま維持）
+  // ファイルカード一覧を更新
   document.getElementById('files-list').innerHTML = state.files.map((f, i) => `
     <div class="file-card">
       <span class="file-channel">${escHtml(f.channel)}</span>
@@ -863,9 +866,19 @@ function renderUI() {
     </div>
   `).join('');
 
+  // 開閉状態を確実に反映（HTML側のキャッシュ状態に依存しない）
+  applyFilesListState();
+
   updateSelectors();
   buildTab4Controls();
   renderActiveTab();
+}
+
+function applyFilesListState() {
+  const list  = document.getElementById('files-list');
+  const caret = document.querySelector('#files-toggle .toggle-caret');
+  if (list)  list.classList.toggle('hidden', !filesListOpen);
+  if (caret) caret.textContent = filesListOpen ? '▼' : '▶';
 }
 
 // ── Event listeners ──────────────────────────────────────────────────────────
@@ -924,10 +937,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ファイル一覧の開閉トグル
   document.getElementById('files-toggle').addEventListener('click', () => {
-    const list   = document.getElementById('files-list');
-    const caret  = document.querySelector('#files-toggle .toggle-caret');
-    const nowHidden = list.classList.toggle('hidden');
-    caret.textContent = nowHidden ? '▶' : '▼';
+    filesListOpen = !filesListOpen;
+    applyFilesListState();
   });
 
   // 前回保存したファイルを復元
