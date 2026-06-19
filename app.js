@@ -816,9 +816,6 @@ function loadFilesFromStorage() {
 
 // ── File management ──────────────────────────────────────────────────────────
 async function addFile(file) {
-  const btn = document.querySelector('.btn-primary');
-  btn.textContent = '読み込み中…';
-  btn.disabled = true;
   try {
     const data = await loadFile(file);
     const idx = state.files.findIndex(f => f.filename === data.filename);
@@ -827,9 +824,6 @@ async function addFile(file) {
     saveFilesToStorage();
   } catch (e) {
     alert(`読み込みエラー: ${e.message}`);
-  } finally {
-    btn.textContent = 'ファイルを選択';
-    btn.disabled = false;
   }
 }
 
@@ -883,22 +877,25 @@ function applyFilesListState() {
 
 // ── Event listeners ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // File input
-  document.getElementById('file-input').addEventListener('change', async (e) => {
-    for (const f of e.target.files) await addFile(f);
-    e.target.value = '';
-  });
-
-  // Drag & drop
-  const dz = document.getElementById('dropzone');
-  dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('over'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
-  dz.addEventListener('drop', async (e) => {
-    e.preventDefault(); dz.classList.remove('over');
-    for (const f of e.dataTransfer.files) {
-      if (f.name.toLowerCase().endsWith('.csv')) await addFile(f);
-    }
-  });
+  // ドロップゾーンの共通セットアップ
+  function setupDropzone(dzId, inputId) {
+    const input = document.getElementById(inputId);
+    const dz    = document.getElementById(dzId);
+    input.addEventListener('change', async (e) => {
+      for (const f of e.target.files) await addFile(f);
+      e.target.value = '';
+    });
+    dz.addEventListener('dragover',  (e) => { e.preventDefault(); dz.classList.add('over'); });
+    dz.addEventListener('dragleave', ()  => dz.classList.remove('over'));
+    dz.addEventListener('drop', async (e) => {
+      e.preventDefault(); dz.classList.remove('over');
+      for (const f of e.dataTransfer.files) {
+        if (f.name.toLowerCase().endsWith('.csv')) await addFile(f);
+      }
+    });
+  }
+  setupDropzone('dropzone-monthly', 'file-input-monthly');
+  setupDropzone('dropzone-weekly',  'file-input-weekly');
 
   // Tabs
   document.querySelectorAll('.tab-btn').forEach(btn => {

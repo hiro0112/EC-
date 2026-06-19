@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>EC-app 分析ダッシュボード</title>
   <meta http-equiv="Cache-Control" content="no-cache">
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 <div id="app">
@@ -17,15 +17,42 @@
 
   <!-- Upload -->
   <section class="upload-section">
-    <div id="dropzone" class="dropzone">
-      <div class="dropzone-inner">
-        <div class="upload-icon">📂</div>
-        <p class="upload-text">CSVファイルをドラッグ＆ドロップ</p>
-        <p class="upload-sub">または</p>
-        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">ファイルを選択</button>
-        <input type="file" id="file-input" accept=".csv" multiple style="display:none">
-        <p class="upload-hint">複数ファイル可 ／ 月次例：楽天・26年５月.csv　週次例：アマゾン・26年5月1日.csv</p>
+    <div class="upload-grid">
+
+      <!-- 月次 -->
+      <div class="upload-pane">
+        <p class="upload-pane-label">
+          ① 月次データ
+          <span class="upload-pane-hint">例：楽天・26年５月.csv</span>
+        </p>
+        <div id="dropzone-monthly" class="dropzone">
+          <div class="dropzone-inner">
+            <div class="upload-icon">📅</div>
+            <p class="upload-text">月次CSVをドラッグ＆ドロップ</p>
+            <p class="upload-sub">または</p>
+            <button class="btn btn-primary" onclick="document.getElementById('file-input-monthly').click()">ファイルを選択</button>
+            <input type="file" id="file-input-monthly" accept=".csv" multiple style="display:none">
+          </div>
+        </div>
       </div>
+
+      <!-- 週次 -->
+      <div class="upload-pane">
+        <p class="upload-pane-label">
+          ② 週次データ
+          <span class="upload-pane-hint">例：アマゾン・26年5月1日.csv</span>
+        </p>
+        <div id="dropzone-weekly" class="dropzone dropzone--weekly">
+          <div class="dropzone-inner">
+            <div class="upload-icon">📆</div>
+            <p class="upload-text">週次CSVをドラッグ＆ドロップ</p>
+            <p class="upload-sub">または</p>
+            <button class="btn btn-secondary" onclick="document.getElementById('file-input-weekly').click()">ファイルを選択</button>
+            <input type="file" id="file-input-weekly" accept=".csv" multiple style="display:none">
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
@@ -179,6 +206,6 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

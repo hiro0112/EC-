@@ -59,6 +59,30 @@ body {
 /* ── Upload ── */
 .upload-section { padding-top: 24px; }
 
+/* 2カラムグリッド（月次・週次）*/
+.upload-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .upload-grid { grid-template-columns: 1fr; }
+}
+.upload-pane-label {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.upload-pane-hint {
+  font-size: .72rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .dropzone {
   border: 2px dashed var(--border);
   border-radius: 12px;
@@ -66,16 +90,27 @@ body {
   cursor: pointer;
   transition: border-color .2s, background .2s;
 }
-.dropzone.over {
+.dropzone.over,
+.dropzone:hover {
   border-color: var(--primary-lt);
   background: #eff6ff;
 }
+/* 週次ゾーンはグリーン系 */
+.dropzone--weekly {
+  border-color: #6ee7b7;
+}
+.dropzone--weekly.over,
+.dropzone--weekly:hover {
+  border-color: var(--green);
+  background: #ecfdf5;
+}
+
 .dropzone-inner {
-  padding: 40px 24px;
+  padding: 32px 20px;
   text-align: center;
 }
-.upload-icon { font-size: 2.5rem; margin-bottom: 10px; }
-.upload-text { font-size: 1rem; font-weight: 600; margin-bottom: 4px; }
+.upload-icon { font-size: 2rem; margin-bottom: 8px; }
+.upload-text { font-size: .95rem; font-weight: 600; margin-bottom: 4px; }
 .upload-sub  { color: var(--muted); margin-bottom: 10px; }
 .upload-hint { font-size: .8rem; color: var(--muted); margin-top: 10px; }
 
@@ -92,6 +127,8 @@ body {
 }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-primary:hover { background: #1d4ed8; }
+.btn-secondary { background: var(--green); color: #fff; }
+.btn-secondary:hover { background: #059669; }
 
 /* ── Files list ── */
 .files-section { margin-top: 20px; }
