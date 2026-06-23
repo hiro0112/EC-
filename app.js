@@ -280,6 +280,23 @@ function updateSelectors() {
   const t3cur = t3sel.value;
   t3sel.innerHTML = t3chOpts;
   if (t3cur) t3sel.value = t3cur;
+
+  // Tab ⑤: 週次ファイルのチャネル・期間
+  const wfAll      = state.files.filter(f => f.type === 'weekly');
+  const wChannels  = [...new Set(wfAll.map(f => f.channel))].sort();
+  const wPeriodMap = {};
+  wfAll.forEach(f => { wPeriodMap[f.sortKey] = f.period; });
+  const wPeriods   = Object.keys(wPeriodMap).sort().map(k => wPeriodMap[k]);
+
+  const t5chOpts = '<option value="">全チャネル</option>' +
+    wChannels.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+  const t5prOpts = '<option value="">全期間</option>' +
+    wPeriods.map(p => `<option value="${escHtml(p)}">${escHtml(p)}</option>`).join('');
+
+  const t5ch = document.getElementById('t5-channel');
+  if (t5ch) { const cur = t5ch.value; t5ch.innerHTML = t5chOpts; if (cur) t5ch.value = cur; }
+  const t5pr = document.getElementById('t5-period');
+  if (t5pr) { const cur = t5pr.value; t5pr.innerHTML = t5prOpts; if (cur) t5pr.value = cur; }
 }
 
 // ── Render helpers ───────────────────────────────────────────────────────────
@@ -419,6 +436,91 @@ function renderTab2() {
       plugins: {
         legend: { display: false },
         title: { display: true, text: `商品別${label}（降順）` },
+        tooltip: {
+          callbacks: {
+            label: (item) => {
+              const p = products[item.dataIndex];
+              return [`${label}：${fmt(item.raw)}`, `売上金額：${fmt(p.amount)}円`, `売上数量：${fmt(p.qty)}個`];
+            }
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: label } },
+        y: { ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ── Tab 5: Weekly Per-Product Sales ──────────────────────────────────────────
+function renderTab5() {
+  const ch     = document.getElementById('t5-channel').value;
+  const pr     = document.getElementById('t5-period').value;
+  const metric = document.getElementById('t5-metric').value;
+  const topn   = parseInt(document.getElementById('t5-topn').value) || 0;
+  const search = document.getElementById('t5-search').value.trim();
+
+  const wf = state.files.filter(f => f.type === 'weekly');
+  if (wf.length === 0) {
+    destroyChart('chart5');
+    document.getElementById('t5-chart-wrap').innerHTML =
+      '<div class="empty-state">週次ファイルが読み込まれていません</div>';
+    return;
+  }
+
+  const rows = wf
+    .filter(f => (!ch || f.channel === ch) && (!pr || f.period === pr))
+    .flatMap(f => f.rows);
+
+  let products = byProduct(rows);
+
+  if (search) {
+    const terms = search.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+    products = products.filter(p => terms.some(t => p.name.toLowerCase().includes(t)));
+  }
+
+  const key = metric === 'qty' ? 'qty' : 'amount';
+  products.sort((a, b) => b[key] - a[key]);
+  if (topn > 0) products = products.slice(0, topn);
+
+  if (products.length === 0) {
+    destroyChart('chart5');
+    document.getElementById('t5-chart-wrap').innerHTML = '<div class="empty-state">データがありません</div>';
+    return;
+  }
+
+  setChartHeight('t5-chart-wrap', products.length);
+
+  destroyChart('chart5');
+  let canvas = document.getElementById('chart5');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.id = 'chart5';
+    document.getElementById('t5-chart-wrap').innerHTML = '';
+    document.getElementById('t5-chart-wrap').appendChild(canvas);
+  }
+
+  const label = metric === 'qty' ? '売上数量 (個)' : '売上金額 (円)';
+  const ctx = canvas.getContext('2d');
+  state.charts['chart5'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: products.map(p => p.name.length > 45 ? p.name.slice(0, 45) + '…' : p.name),
+      datasets: [{
+        label,
+        data: products.map(p => p[key]),
+        backgroundColor: 'rgba(16,185,129,.8)',
+        borderColor: 'rgba(16,185,129,1)',
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        title: { display: true, text: `週次 商品別${label}（降順）` },
         tooltip: {
           callbacks: {
             label: (item) => {
@@ -817,6 +919,7 @@ function renderActiveTab() {
   else if (state.activeTab === 2) renderTab2();
   else if (state.activeTab === 3) renderTab3();
   else if (state.activeTab === 4) renderTab4();
+  else if (state.activeTab === 5) renderTab5();
 }
 
 // ── LocalStorage Persistence ──────────────────────────────────────────────────
@@ -961,6 +1064,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // Tab 3 controls
   ['t3-channel','t3-topn'].forEach(id =>
     document.getElementById(id).addEventListener('change', renderTab3));
+
+  // Tab 5 controls
+  ['t5-channel','t5-period','t5-metric','t5-topn'].forEach(id =>
+    document.getElementById(id).addEventListener('change', renderTab5));
+  document.getElementById('t5-search').addEventListener('input', renderTab5);
 
   // Tab 4 controls（null ガード付き：HTML キャッシュ不整合でもクラッシュしない）
   const el4m  = document.getElementById('t4-metric');
