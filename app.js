@@ -49,12 +49,13 @@ function parseCSV(text, filename) {
     if (!name) continue;
     rows.push({
       code, name,
-      price:     parseNum(fields[2]),
-      inventory: parseNum(fields[4]),
-      soldQty:   parseNum(fields[8]),
-      salesAmt:  parseNum(fields[9]),
-      channel:   meta.channel,
-      period:    meta.period,
+      price:         parseNum(fields[2]),
+      inventory:     parseNum(fields[4]),
+      freeInventory: parseNum(fields[6]),
+      soldQty:       parseNum(fields[8]),
+      salesAmt:      parseNum(fields[9]),
+      channel:       meta.channel,
+      period:        meta.period,
     });
   }
 
@@ -102,9 +103,18 @@ function extractMeta(filename) {
   const norm = period.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFF10 + 48));
 
   // 週次ファイル: X年X月X日
-  const dM = norm.match(/^(\d+)年(\d+)月(\d+)日$/);
+  const dM = norm.match(/^(\d+)年(\d+)月(\d+)日/);
   if (dM) {
     const yr = 2000 + parseInt(dM[1]), mo = parseInt(dM[2]), dy = parseInt(dM[3]);
+    const date    = new Date(yr, mo - 1, dy);
+    const sortKey = `${yr}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
+    return { channel, period, type: 'weekly', date, sortKey };
+  }
+
+  // 週次ファイル（日付範囲）: X年X月X-X / X年X月X～X (例: 26年5月1-7)
+  const rM = norm.match(/^(\d+)年(\d+)月(\d+)[－\-～~]/);
+  if (rM) {
+    const yr = 2000 + parseInt(rM[1]), mo = parseInt(rM[2]), dy = parseInt(rM[3]);
     const date    = new Date(yr, mo - 1, dy);
     const sortKey = `${yr}-${String(mo).padStart(2,'0')}-${String(dy).padStart(2,'0')}`;
     return { channel, period, type: 'weekly', date, sortKey };
@@ -256,7 +266,7 @@ function updateSelectors() {
     sel.innerHTML = chOpts;
     if (cur) sel.value = cur;
   });
-  ['t1-period','t2-period'].forEach(id => {
+  ['t2-period'].forEach(id => {
     const sel = document.getElementById(id), cur = sel.value;
     sel.innerHTML = prOpts;
     if (cur) sel.value = cur;
@@ -291,57 +301,62 @@ function escHtml(s) {
 
 function fmt(n) { return n.toLocaleString('ja-JP'); }
 
-// ── Tab 1: Overall Sales ─────────────────────────────────────────────────────
+// ── Tab 1: Overall Sales (月次売上金額推移 折れ線グラフ) ─────────────────────
 function renderTab1() {
-  const ch = document.getElementById('t1-channel').value;
-  const pr = document.getElementById('t1-period').value;
-  const rows = filteredRows(ch, pr);
+  const ch   = document.getElementById('t1-channel').value;
+  const rows = filteredRows(ch, '');  // 全期間
 
   const totalAmt  = rows.reduce((s, r) => s + r.salesAmt, 0);
-  const totalQty  = rows.reduce((s, r) => s + r.soldQty, 0);
   const prodCount = new Set(rows.map(r => groupName(r.name))).size;
   const skuCount  = rows.length;
 
   document.getElementById('t1-cards').innerHTML = `
     <div class="card"><div class="card-val">${fmt(totalAmt)}円</div><div class="card-lbl">売上金額合計</div></div>
-    <div class="card"><div class="card-val">${fmt(totalQty)}個</div><div class="card-lbl">売上数量合計</div></div>
     <div class="card"><div class="card-val">${prodCount}</div><div class="card-lbl">商品種類数</div></div>
     <div class="card"><div class="card-val">${skuCount}</div><div class="card-lbl">SKU数</div></div>
   `;
 
-  const chData = byChannel(rows);
-  if (chData.length === 0) return;
+  const mFiles = state.files.filter(f => f.type === 'monthly');
+  if (mFiles.length === 0) return;
+
+  // sortKey → period ラベルのマッピング（月次ファイルのみ）
+  const periodMap = {};
+  mFiles.forEach(f => { periodMap[f.sortKey] = f.period; });
+  const sortedKeys   = Object.keys(periodMap).sort();
+  const periodLabels = sortedKeys.map(k => periodMap[k]);
+
+  // チャネルリスト（全選択時は全チャネル、個別選択時はそのチャネルのみ）
+  const channels = ch
+    ? [ch]
+    : [...new Set(mFiles.map(f => f.channel))].sort();
+
+  const datasets = channels.map((channel, i) => ({
+    label: channel,
+    data: sortedKeys.map(sk =>
+      mFiles
+        .filter(f => f.channel === channel && f.sortKey === sk)
+        .reduce((s, f) => s + f.rows.reduce((ss, r) => ss + r.salesAmt, 0), 0)
+    ),
+    borderColor:     CHART_COLORS[i % CHART_COLORS.length],
+    backgroundColor: CHART_COLORS[i % CHART_COLORS.length] + '33',
+    tension: 0.3, fill: false, pointRadius: 5,
+  }));
 
   destroyChart('chart1');
   document.querySelector('#tab-1 .chart-wrap').style.height = '350px';
   const ctx = document.getElementById('chart1').getContext('2d');
   state.charts['chart1'] = new Chart(ctx, {
-    data: {
-      labels: chData.map(c => c.channel),
-      datasets: [
-        {
-          type: 'bar', label: '売上金額 (円)',
-          data: chData.map(c => c.amount),
-          backgroundColor: 'rgba(59,130,246,.8)',
-          yAxisID: 'y',
-        },
-        {
-          type: 'bar', label: '売上数量 (個)',
-          data: chData.map(c => c.qty),
-          backgroundColor: 'rgba(16,185,129,.8)',
-          yAxisID: 'y1',
-        }
-      ]
-    },
+    type: 'line',
+    data: { labels: periodLabels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { position: 'top' },
-        title: { display: true, text: 'チャネル別売上' },
+        title: { display: true, text: ch ? `${ch} 月次売上金額推移` : 'チャネル別 月次売上金額推移' },
       },
       scales: {
-        y:  { position: 'left',  title: { display: true, text: '売上金額 (円)' } },
-        y1: { position: 'right', title: { display: true, text: '売上数量 (個)' }, grid: { drawOnChartArea: false } },
+        y: { title: { display: true, text: '売上金額 (円)' } },
+        x: { title: { display: true, text: '期間' } },
       }
     }
   });
@@ -422,49 +437,73 @@ function renderTab2() {
 }
 
 // ── Tab 3: Inventory Analysis ─────────────────────────────────────────────────
+// 分子: 最新月次ファイルのフリー在庫数（列6）
+// 分母: 最新週次ファイルの受注数量合計 × 4（週→月換算）
 function renderTab3() {
   const ch   = document.getElementById('t3-channel').value;
   const topn = parseInt(document.getElementById('t3-topn').value) || 0;
-
-  // 月次・週次ファイルすべてを対象（最新 sortKey のファイルを在庫として使用）
-  const relevantFiles = state.files.filter(f => !ch || f.channel === ch);
-  if (relevantFiles.length === 0) return;
-
-  // sortKey で最新ファイルを特定（ISO 日付文字列で比較）
-  const latestKey = relevantFiles.reduce((mx, f) => f.sortKey > mx ? f.sortKey : mx, '');
-  const invRows   = relevantFiles.filter(f => f.sortKey === latestKey).flatMap(f => f.rows);
-  const latestPeriod = relevantFiles.find(f => f.sortKey === latestKey).period;
-
-  // 在庫基準期間を表示
   const infoEl = document.getElementById('t3-latest-info');
-  if (infoEl) infoEl.textContent = `在庫基準: ${latestPeriod}`;
 
-  // 月次ファイルのみで月間販売ペースを算出
-  const salesFiles  = state.files.filter(f => f.type === 'monthly' && (!ch || f.channel === ch));
-  const periodCount = new Set(salesFiles.map(f => f.period)).size || 1;
-  const salesMap    = {};
-  for (const r of salesFiles.flatMap(f => f.rows)) {
-    salesMap[r.code] = (salesMap[r.code] || 0) + r.soldQty;
+  // ── 分子: 最新月次ファイルのフリー在庫数 ──
+  const mFiles = state.files.filter(f => f.type === 'monthly' && (!ch || f.channel === ch));
+  if (mFiles.length === 0) {
+    destroyChart('chart3');
+    document.getElementById('t3-chart-wrap').innerHTML = '<div class="empty-state">月次ファイルが読み込まれていません</div>';
+    document.getElementById('t3-table').innerHTML = '';
+    if (infoEl) infoEl.textContent = '';
+    return;
   }
 
+  const latestMonthKey    = mFiles.reduce((mx, f) => f.sortKey > mx ? f.sortKey : mx, '');
+  const invRows           = mFiles.filter(f => f.sortKey === latestMonthKey).flatMap(f => f.rows);
+  const latestMonthPeriod = mFiles.find(f => f.sortKey === latestMonthKey).period;
+
+  // ── 分母: チャネルごとの最新週次ファイルの受注数量を合算 ──
+  const wFiles = state.files.filter(f => f.type === 'weekly' && (!ch || f.channel === ch));
+  const weeklyRateMap = {};  // SKUコード → 最新週次合計受注数量
+  let latestWeekPeriod = null;
+
+  if (wFiles.length > 0) {
+    const weeklyChannels = [...new Set(wFiles.map(f => f.channel))];
+    for (const wch of weeklyChannels) {
+      const chFiles    = wFiles.filter(f => f.channel === wch);
+      const latestWKey = chFiles.reduce((mx, f) => f.sortKey > mx ? f.sortKey : mx, '');
+      const latestRows = chFiles.filter(f => f.sortKey === latestWKey).flatMap(f => f.rows);
+      for (const r of latestRows) {
+        weeklyRateMap[r.code] = (weeklyRateMap[r.code] || 0) + r.soldQty;
+      }
+      if (!latestWeekPeriod) {
+        const lf = chFiles.find(f => f.sortKey === latestWKey);
+        if (lf) latestWeekPeriod = lf.period;
+      }
+    }
+  }
+
+  // 在庫基準の表示
+  if (infoEl) {
+    const wInfo = latestWeekPeriod ? ` ／ 週次: ${latestWeekPeriod} × 4` : ' ／ 週次未読込';
+    infoEl.textContent = `在庫基準: ${latestMonthPeriod}${wInfo}`;
+  }
+
+  // SKU別フリー在庫数を集計（旧データ互換: freeInventoryがなければinventoryで代替）
   const invMap = {};
   for (const r of invRows) {
     if (!invMap[r.code]) invMap[r.code] = { code: r.code, name: r.name, inventory: 0 };
-    invMap[r.code].inventory += r.inventory;
+    invMap[r.code].inventory += (r.freeInventory !== undefined ? r.freeInventory : r.inventory);
   }
 
   const items = Object.values(invMap)
     .filter(inv => inv.inventory > 0)
     .map(inv => {
-      const totalSold   = salesMap[inv.code] || 0;
-      const monthlyRate = totalSold / periodCount;
+      const weeklySold  = weeklyRateMap[inv.code] || 0;
+      const monthlyRate = weeklySold * 4;
       const monthsLeft  = monthlyRate > 0 ? inv.inventory / monthlyRate : Infinity;
       return {
         code: inv.code,
         name: inv.name,
-        inventory: inv.inventory,
+        inventory:   inv.inventory,
         monthlyRate: Math.round(monthlyRate * 10) / 10,
-        monthsLeft: monthsLeft === Infinity ? Infinity : Math.round(monthsLeft * 10) / 10,
+        monthsLeft:  monthsLeft === Infinity ? Infinity : Math.round(monthsLeft * 10) / 10,
       };
     });
 
@@ -520,12 +559,12 @@ function renderTab3() {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        title: { display: true, text: `残り在庫月数ランキング（昇順）　基準期間：${latestPeriod}` },
+        title: { display: true, text: `残り在庫月数（在庫基準：${latestMonthPeriod}）` },
         tooltip: {
           callbacks: {
             afterBody: (items) => {
               const it = displayed[items[0].dataIndex];
-              return [`在庫数：${fmt(it.inventory)}個`, `月間販売数：${it.monthlyRate}個`];
+              return [`フリー在庫：${fmt(it.inventory)}個`, `月間推定販売数：${it.monthlyRate}個`];
             }
           }
         }
@@ -554,17 +593,24 @@ function renderTab3Table(items) {
 
   document.getElementById('t3-table').innerHTML = `
     <table>
-      <thead><tr><th>SKU名</th><th>在庫数</th><th>月間販売数</th><th>残り月数</th></tr></thead>
+      <thead><tr><th>SKU名</th><th>フリー在庫数</th><th>月間推定販売数（週次×4）</th><th>残り月数</th></tr></thead>
       <tbody>${tbody}</tbody>
     </table>
   `;
 }
 
 // ── Tab 4: Weekly Trend ───────────────────────────────────────────────────────
-// sortKey "2026-05-01" → "5/1" 形式に変換
+// sortKey "2026-05-01" → "5/1" 形式に変換（フォールバック用）
 function fmtWeekLabel(sortKey) {
   const m = sortKey.match(/^\d{4}-(\d{2})-(\d{2})$/);
   return m ? `${parseInt(m[1])}/${parseInt(m[2])}` : sortKey;
+}
+
+// sortKey の配列に対応する表示ラベルをperiod文字列で返す（なければfmtWeekLabel）
+function wfPeriodLabels(wf, dates) {
+  const map = {};
+  wf.forEach(f => { if (!map[f.sortKey]) map[f.sortKey] = f.period; });
+  return dates.map(d => map[d] || fmtWeekLabel(d));
 }
 
 function renderTab4() {
@@ -612,7 +658,7 @@ function renderTab4a() {
   }
   state.charts['chart4a'] = new Chart(document.getElementById('chart4a').getContext('2d'), {
     type: 'line',
-    data: { labels: dates.map(fmtWeekLabel), datasets },
+    data: { labels: wfPeriodLabels(wf, dates), datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
@@ -696,7 +742,7 @@ function renderTab4b() {
   }
   state.charts['chart4b'] = new Chart(document.getElementById('chart4b').getContext('2d'), {
     type: 'line',
-    data: { labels: dates.map(fmtWeekLabel), datasets },
+    data: { labels: wfPeriodLabels(activeWf, dates), datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
@@ -815,9 +861,11 @@ function loadFilesFromStorage() {
 }
 
 // ── File management ──────────────────────────────────────────────────────────
-async function addFile(file) {
+// forceType: 'monthly' | 'weekly' | undefined — ドロップゾーン由来の型強制
+async function addFile(file, forceType) {
   try {
     const data = await loadFile(file);
+    if (forceType) data.type = forceType;
     const idx = state.files.findIndex(f => f.filename === data.filename);
     if (idx >= 0) state.files[idx] = data; else state.files.push(data);
     renderUI();
@@ -877,12 +925,12 @@ function applyFilesListState() {
 
 // ── Event listeners ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  // ドロップゾーンの共通セットアップ
-  function setupDropzone(dzId, inputId) {
+  // ドロップゾーンの共通セットアップ（fileType でファイル種別を強制）
+  function setupDropzone(dzId, inputId, fileType) {
     const input = document.getElementById(inputId);
     const dz    = document.getElementById(dzId);
     input.addEventListener('change', async (e) => {
-      for (const f of e.target.files) await addFile(f);
+      for (const f of e.target.files) await addFile(f, fileType);
       e.target.value = '';
     });
     dz.addEventListener('dragover',  (e) => { e.preventDefault(); dz.classList.add('over'); });
@@ -890,12 +938,12 @@ document.addEventListener('DOMContentLoaded', () => {
     dz.addEventListener('drop', async (e) => {
       e.preventDefault(); dz.classList.remove('over');
       for (const f of e.dataTransfer.files) {
-        if (f.name.toLowerCase().endsWith('.csv')) await addFile(f);
+        if (f.name.toLowerCase().endsWith('.csv')) await addFile(f, fileType);
       }
     });
   }
-  setupDropzone('dropzone-monthly', 'file-input-monthly');
-  setupDropzone('dropzone-weekly',  'file-input-weekly');
+  setupDropzone('dropzone-monthly', 'file-input-monthly', 'monthly');
+  setupDropzone('dropzone-weekly',  'file-input-weekly',  'weekly');
 
   // Tabs
   document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -903,8 +951,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Tab 1 controls
-  ['t1-channel','t1-period'].forEach(id =>
-    document.getElementById(id).addEventListener('change', renderTab1));
+  document.getElementById('t1-channel').addEventListener('change', renderTab1);
 
   // Tab 2 controls
   ['t2-channel','t2-period','t2-metric','t2-topn'].forEach(id =>
